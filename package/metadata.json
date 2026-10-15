@@ -1,0 +1,21 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "vivek1234-byte"
+            }
+        ],
+        "Category": "Input",
+        "Description": "Windows 11-style 3-finger touchpad gestures: swipe up for Overview (Task View), down to show the desktop, left/right to switch apps. Each gesture can be turned on or off.",
+        "EnabledByDefault": false,
+        "Icon": "input-touchpad",
+        "Id": "windowsstylegestures",
+        "License": "GPL-3.0-or-later",
+        "Name": "Windows-Style Touchpad Gestures",
+        "Version": "1.1.0",
+        "Website": "https://github.com/vivek1234-byte/windows-style-gestures"
+    },
+    "X-KDE-ConfigModule": "kcm_kwin4_genericscripted",
+    "X-Plasma-API": "declarativescript"
+}

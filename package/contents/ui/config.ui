@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WindowsStyleGesturesConfig</class>
+ <widget class="QWidget" name="WindowsStyleGesturesConfig">
+  <layout class="QFormLayout" name="formLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="gesturesLabel">
+     <property name="text">
+      <string>Gestures:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QCheckBox" name="kcfg_SwipeUpEnabled">
+     <property name="text">
+      <string>3 fingers up: Overview / bring windows back</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QCheckBox" name="kcfg_SwipeDownEnabled">
+     <property name="text">
+      <string>3 fingers down: Show desktop / close Overview</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QCheckBox" name="kcfg_TaskSwitcherEnabled">
+     <property name="text">
+      <string>3 fingers left/right: Task switcher</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLabel" name="taskSwitcherHint">
+     <property name="text">
+      <string>With InputActions installed (see the README), sliding shows the Alt+Tab switcher and KDE's 3-finger desktop swipe is blocked. Without it, each swipe switches one app, and only when you use a single virtual desktop. When off, 3-finger left/right switches virtual desktops as usual.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="distanceLabel">
+     <property name="text">
+      <string>Swipe distance:</string>
+     </property>
+     <property name="buddy">
+      <cstring>kcfg_TriggerDistance</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QSpinBox" name="kcfg_TriggerDistance">
+     <property name="toolTip">
+      <string>Lower fires sooner; higher needs a longer, more deliberate swipe.</string>
+     </property>
+     <property name="suffix">
+      <string>%</string>
+     </property>
+     <property name="minimum">
+      <number>10</number>
+     </property>
+     <property name="maximum">
+      <number>100</number>
+     </property>
+     <property name="singleStep">
+      <number>5</number>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QLabel" name="distanceHint">
+     <property name="text">
+      <string>Lower = faster. Higher = harder to trigger by accident. Applies to up/down.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

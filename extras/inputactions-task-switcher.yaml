@@ -1,0 +1,45 @@
+# Optional 3-finger task switcher for "Windows-Style Touchpad Gestures".
+#
+# KDE uses 3-finger left/right to switch virtual desktops, and a KWin script
+# cannot turn that off. InputActions (https://github.com/InputActions) can,
+# so this file gives you a Windows-style task switcher on 3-finger left/right
+# while the KWin script keeps handling 3-finger up/down.
+#
+# Install InputActions with its KWin plugin, then copy this file to
+# ~/.config/inputactions/config.yaml (it reloads automatically on save).
+#
+#   swipe starts      -> Alt+Tab switcher opens, previous app highlighted
+#   keep sliding      -> move through apps (right = next, left = back)
+#   lift fingers      -> switch to the highlighted app
+#   quick short swipe -> just jumps to the previous app
+
+device_rules:
+  - conditions: $touchpad
+    swipe:
+      angle_tolerance: 45
+
+touchpad:
+  gestures:
+    - type: swipe
+      fingers: 3
+      direction: left_right
+      threshold: 100    # how far to swipe before the switcher opens
+      actions:
+        - on: begin
+          input:
+            - keyboard: [ +leftalt, tab ]
+
+        - on: update
+          interval: 150    # slide distance per app; raise both 150s for slower stepping
+          input:
+            - keyboard: [ tab ]
+
+        - on: update
+          interval: -150
+          input:
+            - keyboard: [ leftshift+tab ]
+
+        # Always release Alt, even if the swipe is interrupted
+        - on: end_cancel
+          input:
+            - keyboard: [ -leftalt ]
