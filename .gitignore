@@ -1,0 +1,7 @@
+# Local InputActions build helper (download from InputActions when needed)
+inputactions-installer.sh
+
+# Editor and patch leftovers
+*~
+*.orig
+*.rej

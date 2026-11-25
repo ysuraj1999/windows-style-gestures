@@ -7,13 +7,13 @@
             }
         ],
         "Category": "Input",
-        "Description": "Windows 11-style 3-finger touchpad gestures: swipe up for Overview (Task View), down to show the desktop, left/right to switch apps. Each gesture can be turned on or off.",
+        "Description": "Android-style 3-finger touchpad recents: swipe up to open the task switcher and hold it, left/right to cycle, then lift to switch after a short idle delay. Also starts a sticky 4-finger left-button drag that hands off to native one-finger movement and ends with a one-finger tap, shows the desktop, and switches apps. Requires InputActions; one setting turns the gestures on or off.",
         "EnabledByDefault": false,
         "Icon": "input-touchpad",
         "Id": "windowsstylegestures",
         "License": "GPL-3.0-or-later",
         "Name": "Windows-Style Touchpad Gestures",
-        "Version": "1.1.0",
+        "Version": "1.4.0",
         "Website": "https://github.com/vivek1234-byte/windows-style-gestures"
     },
     "X-KDE-ConfigModule": "kcm_kwin4_genericscripted",

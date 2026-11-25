@@ -4,9 +4,9 @@
 #   ./install.sh        install or update, asking before replacing an InputActions config
 #   ./install.sh --yes  same, without asking
 #
-# Installs the KWin script and turns it on. If InputActions is installed, also
-# sets it up for the 3-finger task switcher (your old InputActions config is
-# backed up first). No root needed.
+# Installs the KWin script and turns it on. InputActions is required for the
+# gestures: its config is installed here (your old config is backed up first).
+# No root needed.
 set -e
 
 cd "$(dirname "$0")"
@@ -48,7 +48,7 @@ else
 fi
 kwriteconfig6 --file kwinrc --group Plugins --key "${ID}Enabled" true
 
-# 2. InputActions (optional, for the live task switcher)
+# 2. InputActions (required for the gestures)
 has_inputactions() {
     dbus org.inputactions / org.inputactions issues 2>/dev/null \
         || command -v inputactions >/dev/null 2>&1
@@ -73,13 +73,16 @@ if has_inputactions; then
         kwriteconfig6 --file kwinrc --group Plugins --key kwin_gesturesEnabled true
         dbus org.kde.KWin /Effects org.kde.kwin.Effects loadEffect kwin_gestures 2>/dev/null || true
         dbus org.inputactions / org.inputactions reloadConfig 2>/dev/null || true
-        say "InputActions set up for the 3-finger task switcher."
+        say "InputActions set up for the recents and 4-finger drag gestures."
+        say "3-finger up or left/right opens recents; lift to switch after 300 ms."
+        say "4-finger drag stays held; continue with one finger, then tap once to drop."
+        say "Tip: set Task Switcher > Layout to Thumbnail Grid for window previews."
     else
         say "Left your InputActions config unchanged."
     fi
 else
     say ""
-    say "Optional: install InputActions for the full task switcher on 3-finger left/right."
+    say "InputActions is required for the gestures. Install it, then run ./install.sh again:"
     case "$(. /etc/os-release 2>/dev/null; echo "$ID $ID_LIKE")" in
         *fedora*) say "  sudo dnf copr enable silvigarabis/inputactions"
                   say "  sudo dnf install inputactions inputactions-kwin" ;;

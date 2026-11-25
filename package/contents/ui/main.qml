@@ -1,21 +1,18 @@
 /*
     Windows-Style Touchpad Gestures - a KWin script for KDE Plasma 6
 
-    3 fingers up         -> Overview (like Windows Task View); if the desktop is
-                            being shown, brings the windows back instead
-    3 fingers down       -> show the desktop; if Overview is open, closes it instead
-    3 fingers left/right -> task switcher
+    This script is the settings layer for the InputActions configuration in
+    extras/inputactions-task-switcher.yaml:
 
-    Each gesture can be switched on or off in the script's settings.
+    3 fingers up         -> open and hold the task switcher
+    3 fingers left/right -> cycle apps; open recents when closed
+    3 fingers down       -> cancel recents, or show the desktop
+    4 fingers drag       -> sticky left-button drag; continue with one finger,
+                            then tap once to drop
 
-    The task switcher works best with InputActions installed: it shows the
-    Alt+Tab switcher while you slide and blocks KDE's own 3-finger desktop
-    swipe. This script turns InputActions on or off to match the setting.
-    Without InputActions, a swipe switches one app at a time, and only when
-    there is a single virtual desktop (otherwise KDE's desktop swipe wins).
-
-    Actions fire mid-swipe, as soon as the fingers have travelled the configured
-    distance, instead of waiting for the fingers to be lifted.
+    InputActions does the gesture work. This script turns InputActions on or off
+    so the task switcher setting works without editing the InputActions config,
+    and applies changes without logging out.
 
     SPDX-License-Identifier: GPL-3.0-or-later
 */
@@ -25,11 +22,8 @@ import org.kde.kwin
 Item {
     id: root
 
-    // Current settings (see contents/config/main.xml).
-    property bool swipeUpEnabled: true
-    property bool swipeDownEnabled: true
+    // Current setting (see contents/config/main.xml).
     property bool taskSwitcherEnabled: true
-    property real triggerPoint: 0.5
 
     // Whether InputActions is running inside KWin (null = not checked yet).
     property var inputActionsAvailable: null
@@ -41,13 +35,9 @@ Item {
     }
 
     function loadConfig() {
-        swipeUpEnabled = readBool("SwipeUpEnabled", true);
-        swipeDownEnabled = readBool("SwipeDownEnabled", true);
         taskSwitcherEnabled = readBool("TaskSwitcherEnabled", true);
-        const percent = Number(KWin.readConfig("TriggerDistance", 50));
-        triggerPoint = Math.max(10, Math.min(100, percent)) / 100;
 
-        const summary = `up=${swipeUpEnabled} down=${swipeDownEnabled} taskSwitcher=${taskSwitcherEnabled} distance=${Math.round(triggerPoint * 100)}%`;
+        const summary = `taskSwitcher=${taskSwitcherEnabled}`;
         if (summary !== lastSummary) {
             lastSummary = summary;
             console.info("Windows-Style Gestures settings:", summary);
@@ -59,7 +49,7 @@ Item {
     // KWin only re-reads script settings when scripts are (re)started, which
     // the settings dialog doesn't do. Ask KWin to do it, then pick up the new
     // values. Throttled, and triggered by window focus changes (e.g. closing the
-    // settings dialog) and by swipes, so changes apply without logging out.
+    // settings dialog), so changes apply without logging out.
     function refreshConfig() {
         const now = Date.now();
         if (now - refresh.lastRun < 1000) {
@@ -69,14 +59,14 @@ Item {
         refresh.call();
     }
 
-    // Turn InputActions on/off so it only takes over 3-finger left/right when
-    // the task switcher is enabled.
+    // Suspend/resume InputActions so the task switcher setting controls the
+    // bundled recents and 4-finger drag gestures as a group.
     function applyInputActionsState() {
         if (inputActionsAvailable !== true || appliedInputActionsState === taskSwitcherEnabled) {
             return;
         }
         appliedInputActionsState = taskSwitcherEnabled;
-        console.info("Windows-Style Gestures:", taskSwitcherEnabled ? "resuming" : "suspending", "InputActions task switcher");
+        console.info("Windows-Style Gestures:", taskSwitcherEnabled ? "resuming" : "suspending", "InputActions gestures");
         if (taskSwitcherEnabled) {
             inputActionsResume.call();
         } else {
@@ -84,51 +74,12 @@ Item {
         }
     }
 
-    function overviewActive() {
-        return Workspace.isEffectActive("overview");
-    }
-
-    function invokeKWinShortcut(name) {
-        kwinShortcut.arguments = [name];
-        kwinShortcut.call();
-    }
-
-    function setShowingDesktop(show) {
-        showDesktopCall.arguments = [show];
-        showDesktopCall.call();
-    }
-
-    function swipeUp() {
-        if (overviewActive()) {
-            return;
-        }
-        // Restore the windows if the desktop is shown, otherwise open Overview.
-        showingDesktopQuery.call();
-    }
-
-    function swipeDown() {
-        if (overviewActive()) {
-            invokeKWinShortcut("Overview"); // toggles Overview closed
-            return;
-        }
-        setShowingDesktop(true);
-    }
-
-    // Fallback task switcher, used only without InputActions and with a single
-    // virtual desktop, so it never fights KDE's 3-finger desktop swipe.
-    function switchApp(reverse) {
-        if (!taskSwitcherEnabled || inputActionsAvailable === true || Workspace.desktops.length > 1) {
-            return;
-        }
-        invokeKWinShortcut(reverse ? "Walk Through Windows (Reverse)" : "Walk Through Windows");
-    }
-
     Component.onCompleted: {
         loadConfig();
         inputActionsProbe.call();
     }
 
-    // If the script is turned off, stop InputActions' task switcher too.
+    // If the script is turned off, stop InputActions' gestures too.
     Component.onDestruction: {
         if (inputActionsAvailable === true) {
             inputActionsSuspend.call();
@@ -198,106 +149,5 @@ Item {
         path: "/"
         dbusInterface: "org.inputactions"
         method: "reloadConfig"
-    }
-
-    DBusCall {
-        id: kwinShortcut
-        service: "org.kde.kglobalaccel"
-        path: "/component/kwin"
-        dbusInterface: "org.kde.kglobalaccel.Component"
-        method: "invokeShortcut"
-    }
-
-    DBusCall {
-        id: showDesktopCall
-        service: "org.kde.KWin"
-        path: "/KWin"
-        dbusInterface: "org.kde.KWin"
-        method: "showDesktop"
-    }
-
-    DBusCall {
-        id: showingDesktopQuery
-        service: "org.kde.KWin"
-        path: "/KWin"
-        dbusInterface: "org.freedesktop.DBus.Properties"
-        method: "Get"
-        arguments: ["org.kde.KWin", "showingDesktop"]
-        onFinished: returnValue => {
-            if (returnValue[0] === true) {
-                root.setShowingDesktop(false);
-            } else {
-                root.invokeKWinShortcut("Overview");
-            }
-        }
-    }
-
-    // A 3-finger touchpad swipe that fires once, mid-swipe, at the trigger point.
-    component Swipe: SwipeGestureHandler {
-        property bool fired: false
-        signal triggered()
-
-        deviceType: SwipeGestureHandler.Device.Touchpad
-        fingerCount: 3
-
-        onProgressChanged: {
-            if (!fired && progress < 0.1) {
-                root.refreshConfig(); // swipe just started
-            }
-            const point = root.triggerPoint;
-            if (!fired && progress >= point) {
-                fired = true;
-                triggered();
-            } else if (fired && progress < point / 2) {
-                // New swipe, or the fingers went most of the way back: re-arm.
-                fired = false;
-            }
-        }
-        onActivated: fired = false
-        onCancelled: fired = false
-    }
-
-    Swipe {
-        direction: SwipeGestureHandler.Direction.Up
-        onTriggered: {
-            if (root.swipeUpEnabled) {
-                root.swipeUp();
-            }
-        }
-    }
-
-    Swipe {
-        direction: SwipeGestureHandler.Direction.Down
-        onTriggered: {
-            if (root.swipeDownEnabled) {
-                root.swipeDown();
-            }
-        }
-    }
-
-    Swipe {
-        direction: SwipeGestureHandler.Direction.Right
-        onTriggered: root.switchApp(false)
-    }
-
-    Swipe {
-        direction: SwipeGestureHandler.Direction.Left
-        onTriggered: root.switchApp(true)
-    }
-
-    // Same actions as keyboard shortcuts (unassigned by default; set them in
-    // System Settings > Keyboard > Shortcuts > KWin if you want them).
-    ShortcutHandler {
-        name: "Windows-Style Gestures: Swipe Up"
-        text: "Windows-Style Gestures: Overview / restore windows"
-        sequence: ""
-        onActivated: root.swipeUp()
-    }
-
-    ShortcutHandler {
-        name: "Windows-Style Gestures: Swipe Down"
-        text: "Windows-Style Gestures: Show desktop / close Overview"
-        sequence: ""
-        onActivated: root.swipeDown()
     }
 }

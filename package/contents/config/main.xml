@@ -4,23 +4,9 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="">
-    <entry name="SwipeUpEnabled" type="Bool">
-      <label>3-finger swipe up opens Overview and brings windows back</label>
-      <default>true</default>
-    </entry>
-    <entry name="SwipeDownEnabled" type="Bool">
-      <label>3-finger swipe down shows the desktop and closes Overview</label>
-      <default>true</default>
-    </entry>
     <entry name="TaskSwitcherEnabled" type="Bool">
-      <label>3-finger swipe left/right switches apps</label>
+      <label>3-finger recents and the 4-finger drag (requires InputActions)</label>
       <default>true</default>
-    </entry>
-    <entry name="TriggerDistance" type="Int">
-      <label>How far to swipe before the action fires, in percent of a full swipe</label>
-      <default>50</default>
-      <min>10</min>
-      <max>100</max>
     </entry>
   </group>
 </kcfg>

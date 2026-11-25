@@ -1,17 +1,62 @@
-# Optional 3-finger task switcher for "Windows-Style Touchpad Gestures".
+# Android-style recents / task switcher for
+# "Windows-Style Touchpad Gestures".
 #
 # KDE uses 3-finger left/right to switch virtual desktops, and a KWin script
-# cannot turn that off. InputActions (https://github.com/InputActions) can,
-# so this file gives you a Windows-style task switcher on 3-finger left/right
-# while the KWin script keeps handling 3-finger up/down.
+# cannot turn that off. InputActions (https://github.com/InputActions) can, and
+# it can also keep KDE's Alt+Tab switcher open while you browse. This file gives
+# you Android-style task switching:
+#
+#   3-finger up                 -> open the task switcher, previous app highlighted
+#   keep fingers on the pad    -> the switcher stays open
+#   lift                       -> wait 300 ms, then switch to the highlighted app
+#   3-finger left/right        -> open recents if it is closed, or cycle through
+#                                 apps; each swipe resets the 300 ms timer
+#   3-finger down while open   -> cancel without switching
+#   3-finger down while closed -> show the desktop
+#   4-finger swipe             -> start a left-button drag
+#   keep 4 fingers on          -> keep dragging
+#   lift all 4                 -> the drag stays held
+#   continue with 1 finger     -> normal pointer drag; the drag stays held
+#   tap 1 finger               -> release/drop
+#
+# The recents idle delay is the `resume_timeout` values below (milliseconds).
+# Keep them equal. 300 ms matches libinput's tap-and-drag lock timeout; raise it
+# if you want more time between swipes, lower it for a snappier commit.
+#
+# The 4-finger drag is sticky. Do not add a resume timeout here: it would
+# release the button during the handoff to one finger. A one-finger tap drops it.
+#
+# For the Android-like look, set
+#   System Settings > Window Management > Task Switcher > Layout: Thumbnail Grid
 #
 # Install InputActions with its KWin plugin, then copy this file to
 # ~/.config/inputactions/config.yaml (it reloads automatically on save).
-#
-#   swipe starts      -> Alt+Tab switcher opens, previous app highlighted
-#   keep sliding      -> move through apps (right = next, left = back)
-#   lift fingers      -> switch to the highlighted app
-#   quick short swipe -> just jumps to the previous app
+
+scripting:
+  scripts:
+    - source: |
+        var { variableRegistry, VariableType } = require("inputactions/core");
+        var recentsOpen = variableRegistry.registerStoredVariable("recents_open", VariableType.Boolean);
+        recentsOpen.value = false;
+
+        var dragActive = variableRegistry.registerStoredVariable("drag_active", VariableType.Boolean);
+        dragActive.value = false;
+
+        function beginRecents() {
+            recentsOpen.value = true;
+        }
+
+        function closeRecents() {
+            recentsOpen.value = false;
+        }
+
+        function beginDrag() {
+            dragActive.value = true;
+        }
+
+        function endDrag() {
+            dragActive.value = false;
+        }
 
 device_rules:
   - conditions: $touchpad
@@ -20,26 +65,168 @@ device_rules:
 
 touchpad:
   gestures:
+    # Open the task switcher and keep it open until the idle timeout.
     - type: swipe
       fingers: 3
-      direction: left_right
-      threshold: 100    # how far to swipe before the switcher opens
+      direction: up
+      threshold: 10
+      resume_timeout: 300
+      clear_modifiers: false
       actions:
         - on: begin
           input:
             - keyboard: [ +leftalt, tab ]
 
+        - on: begin
+          function: beginRecents
+          conflicting: false
+
+        # Runs after 300 ms without touchpad input. Releasing Alt switches to
+        # the highlighted window.
+        - on: end
+          input:
+            - keyboard: [ -leftalt ]
+
+        - on: end
+          function: closeRecents
+          conflicting: false
+
+        # No release on cancel: a left/right swipe takes over from here. If an
+        # unrelated gesture interrupts recents, a 3-finger down releases Alt.
+
+    # Cycle through windows while the task switcher is open.
+    - type: swipe
+      fingers: 3
+      direction: left_right
+      conditions: $recents_open
+      threshold: 10
+      resume_timeout: 300
+      clear_modifiers: false
+      actions:
+        # 60 units per app. Lower is more sensitive.
         - on: update
-          interval: 150    # slide distance per app; raise both 150s for slower stepping
+          interval: 60
           input:
             - keyboard: [ tab ]
 
         - on: update
-          interval: -150
+          interval: -60
           input:
             - keyboard: [ leftshift+tab ]
 
-        # Always release Alt, even if the swipe is interrupted
-        - on: end_cancel
+        - on: end
           input:
             - keyboard: [ -leftalt ]
+
+        - on: end
+          function: closeRecents
+          conflicting: false
+
+        # No release on cancel: another recents swipe takes over.
+
+    # Starting with left/right opens the task switcher too, exactly like up.
+    - type: swipe
+      fingers: 3
+      direction: left_right
+      conditions: $recents_open == false
+      threshold: 10
+      resume_timeout: 300
+      clear_modifiers: false
+      actions:
+        - on: begin
+          input:
+            - keyboard: [ +leftalt, tab ]
+
+        - on: begin
+          function: beginRecents
+          conflicting: false
+
+        # 60 units per app. Lower is more sensitive.
+        - on: update
+          interval: 60
+          input:
+            - keyboard: [ tab ]
+
+        - on: update
+          interval: -60
+          input:
+            - keyboard: [ leftshift+tab ]
+
+        - on: end
+          input:
+            - keyboard: [ -leftalt ]
+
+        - on: end
+          function: closeRecents
+          conflicting: false
+
+    # Cancel recents without switching.
+    - type: swipe
+      fingers: 3
+      direction: down
+      conditions: $recents_open
+      clear_modifiers: false
+      actions:
+        - on: begin
+          input:
+            - keyboard: [ esc, -leftalt ]
+
+        - on: begin
+          function: closeRecents
+          conflicting: false
+
+    # Show the desktop when recents is not open. KDE's Show Desktop shortcut
+    # toggles, so a second down swipe brings the windows back.
+    - type: swipe
+      fingers: 3
+      direction: down
+      conditions: $recents_open == false
+      clear_modifiers: false
+      actions:
+        # Releasing Alt here is harmless and recovers a stuck modifier after
+        # an interrupted recents gesture.
+        - on: begin
+          input:
+            - keyboard: [ -leftalt ]
+
+        - on: begin
+          plasma_shortcut: kwin,Show Desktop
+
+    # 4-finger drag: press the left button and follow the fingers. No release on
+    # end/cancel: lifting the fingers must not drop the drag while the handoff
+    # to one finger is happening. The one-finger tap below releases it.
+    - type: swipe
+      fingers: 4
+      direction: any
+      threshold: 10
+      clear_modifiers: false
+      actions:
+        - on: begin
+          input:
+            - mouse: [ +left ]
+
+        - on: begin
+          function: beginDrag
+          conflicting: false
+
+        - on: update
+          input:
+            - mouse: [ move_by_delta ] # add a multiplier if the drag feels slow
+
+    # A one-finger tap releases the drag. Tap detection waits for the tap to
+    # complete, so normal one-finger dragging does not trigger it.
+    - type: tap
+      fingers: 1
+      conditions: $drag_active
+      clear_modifiers: false
+      actions:
+        - on: end
+          input:
+            - mouse: [ -left ]
+
+        - on: end
+          function: endDrag
+          conflicting: false
+
+    # One-finger movement needs no InputActions trigger: the left button is
+    # already held, so normal pointer motion continues the drag.
